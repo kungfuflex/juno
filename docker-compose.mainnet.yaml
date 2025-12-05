@@ -1,15 +1,27 @@
+# Juno Mainnet Configuration with Snapshot Support
+#
+# SNAPSHOT SETUP (run before docker-compose up):
+#   1. Install zstd: sudo apt-get install zstd
+#   2. Create snapshot directory: mkdir -p /data/juno-mainnet
+#   3. Download and extract snapshot:
+#      curl -sL https://juno-snapshots.nethermind.io/files/mainnet/latest | zstd -d | tar -xvf - -C /data/juno-mainnet
+#
+# Then run: docker-compose -f docker-compose.mainnet.yaml up -d
+
 services:
   juno:
-    build: .
-    container_name: juno
+    image: nethermind/juno:latest
+    container_name: juno-mainnet
     restart: unless-stopped
     ports:
-      - "6060:6060"
-      - "6061:6061"
+      - "6060:6060"   # HTTP RPC
+      - "6061:6061"   # WebSocket RPC
+      - "9090:9090"   # Metrics (Prometheus)
     volumes:
-      - /data/juno-db:/root/.juno
+      # Mount the snapshot directory (download snapshot here first)
+      - ${JUNO_DB_PATH:-/data/juno-mainnet}:/var/lib/juno
     environment:
-      - ETHEREUM_NODE_URL=${ETHEREUM_NODE_URL:-https://mainnet.infura.io/v3/099fc58e0de9451d80b18d7c74caa7c1}
+      - ETHEREUM_NODE_URL=${ETHEREUM_NODE_URL}
     command:
       - --http
       - --http-host=0.0.0.0
@@ -18,5 +30,8 @@ services:
       - --ws-host=0.0.0.0
       - --ws-port=6061
       - --network=mainnet
-      - --eth-node=${ETHEREUM_NODE_URL:-https://mainnet.infura.io/v3/099fc58e0de9451d80b18d7c74caa7c1}
-      - --db-path=/root/.juno
+      - --db-path=/var/lib/juno
+      - --eth-node=${ETHEREUM_NODE_URL}
+      - --metrics
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9090
