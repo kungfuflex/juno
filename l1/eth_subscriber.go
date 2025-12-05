@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"time"
 
 	"github.com/NethermindEth/juno/l1/contract"
@@ -28,11 +29,31 @@ type EthSubscriber struct {
 
 var _ Subscriber = (*EthSubscriber)(nil)
 
+// uniswapHeaderTransport wraps an http.RoundTripper to add Uniswap headers for Infura compatibility
+type uniswapHeaderTransport struct {
+	transport http.RoundTripper
+}
+
+func (t *uniswapHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Add Uniswap CORS headers for Infura compatibility
+	req.Header.Set("Origin", "https://app.uniswap.org")
+	req.Header.Set("Referer", "https://app.uniswap.org/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36")
+	return t.transport.RoundTrip(req)
+}
+
 func NewEthSubscriber(ethClientAddress string, coreContractAddress common.Address) (*EthSubscriber, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	client, err := rpc.DialContext(ctx, ethClientAddress)
+	// Create custom HTTP client with Uniswap headers for Infura compatibility
+	httpClient := &http.Client{
+		Transport: &uniswapHeaderTransport{
+			transport: http.DefaultTransport,
+		},
+	}
+
+	client, err := rpc.DialOptions(ctx, ethClientAddress, rpc.WithHTTPClient(httpClient))
 	if err != nil {
 		return nil, err
 	}

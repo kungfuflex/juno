@@ -1,0 +1,22 @@
+services:
+  juno:
+    build: .
+    container_name: juno
+    restart: unless-stopped
+    ports:
+      - "6060:6060"
+      - "6061:6061"
+    volumes:
+      - /data/juno-db:/root/.juno
+    environment:
+      - ETHEREUM_NODE_URL=${ETHEREUM_NODE_URL:-https://mainnet.infura.io/v3/099fc58e0de9451d80b18d7c74caa7c1}
+    command:
+      - --http
+      - --http-host=0.0.0.0
+      - --http-port=6060
+      - --ws
+      - --ws-host=0.0.0.0
+      - --ws-port=6061
+      - --network=mainnet
+      - --eth-node=${ETHEREUM_NODE_URL:-https://mainnet.infura.io/v3/099fc58e0de9451d80b18d7c74caa7c1}
+      - --db-path=/root/.juno
